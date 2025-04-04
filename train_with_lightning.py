@@ -1,6 +1,7 @@
 import argparse
 import os
 import pickle
+import datetime
 
 import torch
 import torch.nn as nn
@@ -18,7 +19,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from baseline import DisProtModel, DisProtDataset, make_dataset
 
-# 设置PyTorch的float32矩阵乘法精度为'medium'以优化性能
+# 设置PyTorch的float32矩阵乘法精度为'medium'以优化性能,这将通过牺牲一点精度来显著提高训练速度。
 torch.set_float32_matmul_precision('medium')
 
 class DisProtLightningModel(pl.LightningModule):
@@ -172,17 +173,24 @@ def main():
     parser.add_argument('--gpus', type=int, default=1, help='使用的GPU数量')
     parser.add_argument('--early_stopping', action='store_true', help='是否使用早停')
     parser.add_argument('--patience', type=int, default=5, help='早停的耐心值')
-    parser.add_argument('--output_dir', default='./lightning_outputs', help='输出目录')
+    parser.add_argument('--output_dir', default='./outputs', help='输出目录')
     parser.add_argument('--use_swanlab', action='store_true', help='是否使用SwanLab进行实验跟踪')
     parser.add_argument('--swanlab_project', default='disprot-lightning', help='SwanLab项目名称')
+    parser.add_argument('--no_timestamp', action='store_true', help='不添加时间戳到输出目录')
     
     args = parser.parse_args()
     
     # 加载配置
     config = OmegaConf.load(args.config_path)
     
+    # 添加时间戳到输出目录
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = args.output_dir
+    if not args.no_timestamp:
+        output_dir = os.path.join(args.output_dir, f"run_{timestamp}")
+    
     # 创建输出目录
-    os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
     
     # 最大训练轮数
     max_epochs = args.max_epochs if args.max_epochs is not None else config.train.epochs
@@ -217,7 +225,7 @@ def main():
     
     # 检查点保存
     checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join(args.output_dir, 'checkpoints'),
+        dirpath=os.path.join(output_dir, 'checkpoints'),
         filename='disprot-{epoch:02d}-{val_f1:.4f}',
         monitor='val_f1',
         mode='max',
@@ -242,7 +250,7 @@ def main():
     
     # 标准TensorBoard日志记录器
     tb_logger = TensorBoardLogger(
-        save_dir=args.output_dir,
+        save_dir=output_dir,
         name='disprot_logs'
     )
     loggers.append(tb_logger)
@@ -252,11 +260,15 @@ def main():
         # 将配置转换为字典以便SwanLab记录
         config_dict = OmegaConf.to_container(config, resolve=True)
         
+        # 添加运行时间戳和输出目录到配置
+        config_dict['run_timestamp'] = timestamp
+        config_dict['output_directory'] = output_dir
+        
         # 创建SwanLab日志记录器
         swan_logger = SwanLabLogger(
             project=args.swanlab_project,
             config=config_dict,
-            description="无序蛋白质区域预测模型训练（Lightning版本）",
+            description=f"无序蛋白质区域预测模型训练（Lightning版本）- {timestamp}",
         )
         loggers.append(swan_logger)
     
@@ -268,7 +280,7 @@ def main():
         logger=loggers,
         callbacks=callbacks,
         log_every_n_steps=10,
-        deterministic=False,  # 关闭确定性模式，解决nll_loss2d_forward_out_cuda_template错误
+        deterministic=False,  # 关闭确定性模式，解决nll_loss2d_forward_out_cuda_template错误,交叉熵损失函数在CUDA上没有确定性实现。
         gradient_clip_val=1.0,  # 梯度裁剪，防止梯度爆炸
     )
     
@@ -282,16 +294,27 @@ def main():
     print(f"Best model path: {checkpoint_callback.best_model_path}")
     print(f"Best F1 score: {checkpoint_callback.best_model_score:.4f}")
     
+    # 复制最佳模型到outputs目录的顶层，以便于预测脚本使用
+    best_model_path = checkpoint_callback.best_model_path
+    best_model_filename = os.path.basename(best_model_path)
+    target_path = os.path.join(args.output_dir, "best_model.pth")
+    
+    # 复制最佳模型到顶层输出目录
+    import shutil
+    shutil.copy2(best_model_path, target_path)
+    print(f"最佳模型已复制到: {target_path}")
+    
     # 保存最佳模型到SwanLab（如果启用）
     if args.use_swanlab:
-        swanlab.save(checkpoint_callback.best_model_path)
-        best_model_filename = os.path.basename(checkpoint_callback.best_model_path)
+        swanlab.save(best_model_path)
         
         # 记录最终结果
         swanlab.log({
             "best_model_filename": best_model_filename,
             "best_val_f1": checkpoint_callback.best_model_score.item(),
-            "total_epochs": trainer.current_epoch + 1
+            "total_epochs": trainer.current_epoch + 1,
+            "run_timestamp": timestamp,
+            "output_directory": output_dir
         })
 
         # 完成实验

@@ -52,20 +52,43 @@ if exist saisdata\test.pkl (
 echo %INFO% 使用输入文件: %INPUT_FILE%
 echo %INFO% 检查模型文件...
 
-:: 检查模型文件
+:: 首先检查顶层 outputs 目录下的最佳模型
 set "MODEL_PATH=outputs\best_model.pth"
-if not exist %MODEL_PATH% (
-    echo %INFO% 未找到主模型文件，尝试查找其他模型文件...
-    
-    for /f %%F in ('dir /b /s *.pth ^| sort') do (
-        set "MODEL_PATH=%%F"
+if exist %MODEL_PATH% (
+    echo %INFO% 在顶层目录找到模型文件: %MODEL_PATH%
+    goto :found_model
+)
+
+:: 检查所有时间戳目录下的模型
+echo %INFO% 在时间戳子目录中搜索最佳模型...
+for /d %%D in (outputs\run_*) do (
+    if exist "%%D\best_model.pth" (
+        set "MODEL_PATH=%%D\best_model.pth"
+        echo %INFO% 找到模型文件: !MODEL_PATH!
         goto :found_model
     )
     
-    echo %ERROR% 无法找到任何模型文件！
-    pause
-    exit /b 1
+    if exist "%%D\checkpoints\*.pth" (
+        :: 找到第一个checkpoint文件
+        for %%F in ("%%D\checkpoints\*.pth") do (
+            set "MODEL_PATH=%%F"
+            echo %INFO% 找到模型文件: !MODEL_PATH!
+            goto :found_model
+        )
+    )
 )
+
+:: 如果还没找到，检查所有可能的.pth文件
+echo %INFO% 未找到特定模型文件，搜索所有.pth文件...
+for /f %%F in ('dir /b /s outputs\*.pth ^| sort') do (
+    set "MODEL_PATH=%%F"
+    echo %INFO% 使用找到的模型文件: !MODEL_PATH!
+    goto :found_model
+)
+
+echo %ERROR% 无法找到任何模型文件！
+pause
+exit /b 1
 
 :found_model
 echo %INFO% 使用模型文件: %MODEL_PATH%

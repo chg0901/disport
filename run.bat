@@ -91,6 +91,16 @@ IF NOT EXIST outputs (
     echo %INFO% 输出目录已存在
 )
 
+:: 询问是否添加时间戳
+set /p use_timestamp="是否为输出目录添加时间戳? (y/n): "
+set "timestamp_option="
+if /i NOT "%use_timestamp%"=="y" (
+    set "timestamp_option=--no_timestamp"
+    echo %INFO% 不添加时间戳到输出目录
+) else (
+    echo %INFO% 输出目录将添加时间戳以区分不同运行
+)
+
 :: 询问是否使用SwanLab
 set /p use_swanlab="是否使用SwanLab进行训练可视化? (y/n): "
 
@@ -128,7 +138,7 @@ set /p train_choice="输入选择 (1/2): "
 
 if "%train_choice%"=="1" (
     echo %INFO% 使用基本训练方式...
-    python baseline.py --config_path config.yaml --output_dir ./outputs %swanlab_option%
+    python baseline.py --config_path config.yaml --output_dir ./outputs %timestamp_option% %swanlab_option%
 ) else if "%train_choice%"=="2" (
     echo %INFO% 使用PyTorch Lightning训练方式...
     set /p early_stopping="是否使用早停机制? (y/n): "
@@ -138,9 +148,9 @@ if "%train_choice%"=="1" (
     if /i "%early_stopping%"=="y" (
         set /p patience="设置早停耐心值 (默认为5): "
         if "!patience!"=="" set "patience=5"
-        python train_with_lightning.py --config_path config.yaml --output_dir ./outputs --early_stopping --patience !patience! --gpus !gpu_count! %swanlab_option%
+        python train_with_lightning.py --config_path config.yaml --output_dir ./outputs --early_stopping --patience !patience! --gpus !gpu_count! %timestamp_option% %swanlab_option%
     ) else (
-        python train_with_lightning.py --config_path config.yaml --output_dir ./outputs --gpus !gpu_count! %swanlab_option%
+        python train_with_lightning.py --config_path config.yaml --output_dir ./outputs --gpus !gpu_count! %timestamp_option% %swanlab_option%
     )
 ) else (
     echo %ERROR% 无效的选择，退出脚本

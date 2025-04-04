@@ -2,6 +2,7 @@ import argparse
 import math
 import pickle
 import os
+import datetime
 
 import torch
 import torch.nn as nn
@@ -243,21 +244,33 @@ def main():
     parser.add_argument('--config_path', default='./config.yaml')
     parser.add_argument('--output_dir', default='./outputs', help='输出目录')
     parser.add_argument('--use_swanlab', action='store_true', help='是否使用SwanLab进行可视化')
+    parser.add_argument('--no_timestamp', action='store_true', help='不添加时间戳到输出目录')
     args = parser.parse_args()
     
     config = OmegaConf.load(args.config_path)  # 加载配置文件
     
+    # 添加时间戳到输出目录
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = args.output_dir
+    if not args.no_timestamp:
+        output_dir = os.path.join(args.output_dir, f"run_{timestamp}")
+    
     # 创建输出目录
+    os.makedirs(output_dir, exist_ok=True)
+    # 同时确保顶层输出目录存在
     os.makedirs(args.output_dir, exist_ok=True)
 
     # 初始化SwanLab（如果需要）
     if args.use_swanlab:
         # 将配置转换为字典以便SwanLab记录
         config_dict = OmegaConf.to_container(config, resolve=True)
+        # 添加运行时间戳和输出目录到配置
+        config_dict['run_timestamp'] = timestamp
+        config_dict['output_directory'] = output_dir
         swanlab.init(
             project="disprot-prediction",
             config=config_dict,
-            description="无序蛋白质区域预测模型训练",
+            description=f"无序蛋白质区域预测模型训练 - {timestamp}",
         )
 
     # 准备数据集和数据加载器
@@ -293,6 +306,7 @@ def main():
         swanlab.log({"val_f1": init_f1})
 
     # 训练循环
+    best_val_f1 = 0.0
     for epoch in range(config.train.epochs):
         # 训练阶段
         progress_bar = tqdm(
@@ -340,14 +354,19 @@ def main():
             })
         
         # 保存模型
-        model_path = os.path.join(args.output_dir, f"model_epoch_{epoch}.pth")
+        model_path = os.path.join(output_dir, f"model_epoch_{epoch}.pth")
         torch.save(model.state_dict(), model_path)
         
         # 保存最佳模型
         if epoch == 0 or val_f1 > best_val_f1:
             best_val_f1 = val_f1
-            best_model_path = os.path.join(args.output_dir, "best_model.pth")
+            best_model_path = os.path.join(output_dir, "best_model.pth")
             torch.save(model.state_dict(), best_model_path)
+            # 复制最佳模型到顶层输出目录
+            top_best_model_path = os.path.join(args.output_dir, "best_model.pth")
+            import shutil
+            shutil.copy2(best_model_path, top_best_model_path)
+            
             if args.use_swanlab:
                 swanlab.log({"best_val_f1": best_val_f1})
     
@@ -356,7 +375,9 @@ def main():
         swanlab.log({
             "final_val_f1": val_f1,
             "best_val_f1": best_val_f1,
-            "total_epochs": config.train.epochs
+            "total_epochs": config.train.epochs,
+            "run_timestamp": timestamp,
+            "output_directory": output_dir
         })
         # 保存模型文件到SwanLab
         swanlab.save(best_model_path)
@@ -365,6 +386,7 @@ def main():
         swanlab.finish()
     
     print(f"训练完成！最佳F1分数: {best_val_f1}, 最佳模型已保存到: {best_model_path}")
+    print(f"顶层最佳模型路径: {top_best_model_path}")
 
 
 if __name__ == '__main__':
