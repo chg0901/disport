@@ -58,15 +58,38 @@ if %ERRORLEVEL% NEQ 0 (
     )
 )
 
-:: 检查数据文件
+:: 检查data目录是否存在，不存在则创建
+IF NOT EXIST data (
+    echo %INFO% 数据目录不存在，正在创建...
+    mkdir data
+    echo %SUCCESS% 已创建数据目录！
+)
+
+:: 检查数据文件是否存在或已放置在其他位置
 IF NOT EXIST WSAA_data_public.pkl (
-    echo %ERROR% 数据文件WSAA_data_public.pkl不存在!
-    echo %INFO% 请将数据文件放在当前目录下，或修改config.yaml中的data_path路径
-    goto :eof
+    IF NOT EXIST data\WSAA_data_public.pkl (
+        echo %WARNING% 数据文件WSAA_data_public.pkl不存在于当前目录或data目录！
+        echo %INFO% 如果您已将数据文件放置在其他位置，请确保更新config.yaml中的data_path指向正确路径
+        set /p continue_execution="是否继续执行? (y/n): "
+        if /i NOT "!continue_execution!"=="y" (
+            echo %INFO% 退出脚本
+            goto :eof
+        )
+    ) else (
+        echo %INFO% 在data目录中找到数据文件WSAA_data_public.pkl
+    )
+) else (
+    echo %INFO% 在当前目录找到数据文件WSAA_data_public.pkl
 )
 
 :: 创建输出目录
-mkdir outputs 2>nul
+IF NOT EXIST outputs (
+    echo %INFO% 输出目录不存在，正在创建...
+    mkdir outputs
+    echo %SUCCESS% 已创建输出目录！
+) else (
+    echo %INFO% 输出目录已存在
+)
 
 :: 询问是否使用SwanLab
 set /p use_swanlab="是否使用SwanLab进行训练可视化? (y/n): "
@@ -109,13 +132,15 @@ if "%train_choice%"=="1" (
 ) else if "%train_choice%"=="2" (
     echo %INFO% 使用PyTorch Lightning训练方式...
     set /p early_stopping="是否使用早停机制? (y/n): "
+    set /p gpu_count="设置使用的GPU数量 (默认为1): "
+    if "!gpu_count!"=="" set "gpu_count=1"
     
     if /i "%early_stopping%"=="y" (
         set /p patience="设置早停耐心值 (默认为5): "
         if "!patience!"=="" set "patience=5"
-        python train_with_lightning.py --config_path config.yaml --output_dir ./outputs --early_stopping --patience !patience! %swanlab_option%
+        python train_with_lightning.py --config_path config.yaml --output_dir ./outputs --early_stopping --patience !patience! --gpus !gpu_count! %swanlab_option%
     ) else (
-        python train_with_lightning.py --config_path config.yaml --output_dir ./outputs %swanlab_option%
+        python train_with_lightning.py --config_path config.yaml --output_dir ./outputs --gpus !gpu_count! %swanlab_option%
     )
 ) else (
     echo %ERROR% 无效的选择，退出脚本

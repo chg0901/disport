@@ -18,6 +18,9 @@ from torch.utils.data import Dataset, DataLoader
 
 from baseline import DisProtModel, DisProtDataset, make_dataset
 
+# 设置PyTorch的float32矩阵乘法精度为'medium'以优化性能
+torch.set_float32_matmul_precision('medium')
+
 class DisProtLightningModel(pl.LightningModule):
     """
     使用PyTorch Lightning实现的无序蛋白质预测模型
@@ -178,6 +181,9 @@ def main():
     # 加载配置
     config = OmegaConf.load(args.config_path)
     
+    # 创建输出目录
+    os.makedirs(args.output_dir, exist_ok=True)
+    
     # 最大训练轮数
     max_epochs = args.max_epochs if args.max_epochs is not None else config.train.epochs
     
@@ -257,11 +263,12 @@ def main():
     # 创建训练器
     trainer = pl.Trainer(
         max_epochs=max_epochs,
-        gpus=args.gpus if torch.cuda.is_available() else 0,
+        accelerator='gpu' if torch.cuda.is_available() else 'cpu',
+        devices=args.gpus if torch.cuda.is_available() else None,
         logger=loggers,
         callbacks=callbacks,
         log_every_n_steps=10,
-        deterministic=True,
+        deterministic=False,  # 关闭确定性模式，解决nll_loss2d_forward_out_cuda_template错误
         gradient_clip_val=1.0,  # 梯度裁剪，防止梯度爆炸
     )
     

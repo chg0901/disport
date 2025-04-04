@@ -105,13 +105,7 @@ source disprot/bin/activate  # Linux/Mac
 disprot\Scripts\activate  # Windows
 ```
 
-2. 安装依赖包:
-
-```bash
-pip install -r requirements.txt
-```
-
-3. 如果使用GPU训练，需要确保已安装CUDA（建议CUDA 12.1版本）并安装对应版本的PyTorch:
+2. 如果使用GPU训练，需要确保已安装CUDA（建议CUDA 12.1版本）并安装对应版本的PyTorch:
 
 ```bash
 # 对于CUDA 12.1的示例（已在requirements.txt中指定）
@@ -121,6 +115,14 @@ pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https
 conda install pytorch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 pytorch-cuda=12.1 -c pytorch -c nvidia
 
 ```
+
+
+3. 安装其他依赖包:
+
+```bash
+pip install -r requirements.txt
+```
+
 
 4. 验证环境配置:
 
