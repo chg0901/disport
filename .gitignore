@@ -1,0 +1,54 @@
+# Python 字节编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 发行版 / 打包文件
+dist/
+build/
+*.egg-info/
+
+# 单元测试 / 覆盖率报告
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# 虚拟环境
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.env
+.venv
+
+# IDE文件
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# 项目特定文件
+# WSAA_data_public.pkl
+lightning_outputs/
+outputs/
+checkpoints/
+*.ckpt
+*.pth
+logs/
+tensorboard/
+
+# 结果文件
+predictions/
+*.out
+*.log
+*.csv 
+*.zip

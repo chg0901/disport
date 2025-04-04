@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  disprot-prediction:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: disprot-prediction:latest
+    container_name: disprot-prediction
+    volumes:
+      - ./test_data:/saisdata
+      - ./test_output:/saisresult
+    # 添加GPU支持
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    # 健康检查
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import os, torch; exit(0 if os.path.exists('/app') and torch.__version__ >= '2.4.0' else 1)" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    # 环境变量
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+    # 命令 - 可以覆盖Dockerfile中的ENTRYPOINT
+    # 如需测试环境，可解除下面的注释
+    # command: /app/test-env.sh

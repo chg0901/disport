@@ -1,0 +1,23 @@
+residue_types:
+    21
+
+model:
+    i_dim: 21
+    o_dim: 2
+    d_model: 64
+    n_head: 2
+    n_layer: 2
+
+data:
+    data_path: 'WSAA_data_public.pkl'
+
+train:
+    epochs: 20
+    dataloader:
+        batch_size: 1
+        shuffle: True
+        num_workers: 16
+        drop_last: True
+    optimizer:
+        lr: 2e-4
+        weight_decay: 1e-4
