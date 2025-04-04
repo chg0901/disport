@@ -383,8 +383,6 @@ def main():
             "run_timestamp": timestamp,
             "output_directory": output_dir
         })
-        # 保存模型文件到SwanLab
-        swanlab.save(best_model_path)
         
         # 完成实验
         swanlab.finish()

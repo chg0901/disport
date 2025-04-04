@@ -322,7 +322,8 @@ def main():
     
     # 保存最佳模型到SwanLab（如果启用）
     if args.use_swanlab:
-        swanlab.save(best_model_path)
+        # swanlab.save方法在0.5.4版本中不存在，因此我们不调用这个方法
+        # swanlab.save(best_model_path)
         
         # 记录最终结果
         swanlab.log({

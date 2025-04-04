@@ -3,6 +3,19 @@ SwanLab示例脚本
 展示如何将SwanLab与无序蛋白质预测模型集成使用
 """
 
+import os
+import sys
+
+# 添加项目根目录到Python路径，解决导入问题
+# 获取当前文件的绝对路径
+current_file_path = os.path.abspath(__file__)
+# 获取当前文件所在目录的路径
+current_dir = os.path.dirname(current_file_path)
+# 获取项目根目录路径（当前目录的父目录）
+project_root = os.path.dirname(current_dir)
+# 将项目根目录添加到Python路径
+sys.path.append(project_root)
+
 import swanlab
 import numpy as np
 import torch
@@ -12,7 +25,8 @@ from baseline import DisProtModel, make_dataset
 from omegaconf import OmegaConf
 
 # 加载配置
-config = OmegaConf.load('./config.yaml')
+config_path = os.path.join(project_root, 'config.yaml')
+config = OmegaConf.load(config_path)
 
 # 初始化SwanLab实验
 swanlab.init(
@@ -32,8 +46,8 @@ criterion = nn.CrossEntropyLoss()
 
 # 记录超参数和模型架构概要
 swanlab.log({
-    "model_type": "Transformer",
-    "optimizer": "Adam",
+    "model_type": 0,  # 将字符串类型改为数值类型
+    "optimizer": 0,   # 将字符串类型改为数值类型
     "learning_rate": 0.001,
     "batch_size": config.train.dataloader.batch_size,
 })
@@ -58,10 +72,33 @@ for epoch in range(5):
     print(f"Epoch {epoch}: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Val F1: {val_f1:.4f}")
 
 # 保存示例模型权重
-torch.save(model.state_dict(), "model_demo.pth")
-swanlab.save("model_demo.pth")
+model_path = os.path.join(project_root, "model_demo.pth")
+torch.save(model.state_dict(), model_path)
+# 注意：0.5.4版本的SwanLab可能不支持save方法，因此注释掉这一行
+# swanlab.save(model_path)
 
 # 完成实验
 swanlab.finish()
 
 print("SwanLab示例运行完成！请前往SwanLab查看训练可视化结果。") 
+
+
+########################################################################################
+################### 输出脚本  ########################################################### 
+########################################################################################
+
+# (disprot) cine@cine-WS-C621E-SAGE-Series:~/Documents/Github/disport$ python examples/swanlab_example.py
+# swanlab: Tracking run with swanlab version 0.5.4                                                    
+# swanlab: Run data will be saved locally in /home/cine/Documents/Github/disport/swanlog/run-20250405_030544-45ce3d3f
+# swanlab: 👋 Hi chg0901, welcome to swanlab!
+# swanlab: Syncing run ox-3 to the cloud
+# swanlab: 🏠 View project at https://swanlab.cn/@chg0901/disprot-swanlab-demo
+# swanlab: 🚀 View run at https://swanlab.cn/@chg0901/disprot-swanlab-demo/runs/07ekmimzfowu0dqyitp77
+# Epoch 0: Train Loss: 0.5153, Val Loss: 0.6350, Val F1: 0.6978
+# Epoch 1: Train Loss: 0.4020, Val Loss: 0.5028, Val F1: 0.7563
+# Epoch 2: Train Loss: 0.2935, Val Loss: 0.4586, Val F1: 0.8090
+# Epoch 3: Train Loss: 0.2007, Val Loss: 0.3372, Val F1: 0.8356
+# Epoch 4: Train Loss: 0.1093, Val Loss: 0.3256, Val F1: 0.9043
+# swanlab: 🏠 View project at https://swanlab.cn/@chg0901/disprot-swanlab-demo
+# swanlab: 🚀 View run at https://swanlab.cn/@chg0901/disprot-swanlab-demo/runs/07ekmimzfowu0dqyitp77
+# SwanLab示例运行完成！请前往SwanLab查看训练可视化结果。 
