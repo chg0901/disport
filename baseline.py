@@ -360,12 +360,16 @@ def main():
         # 保存最佳模型
         if epoch == 0 or val_f1 > best_val_f1:
             best_val_f1 = val_f1
-            best_model_path = os.path.join(output_dir, "best_model.pth")
+            # 添加F1分数和时间戳到最佳模型文件名
+            best_model_path = os.path.join(output_dir, f"best_model_f1_{best_val_f1:.4f}.pth")
             torch.save(model.state_dict(), best_model_path)
-            # 复制最佳模型到顶层输出目录
-            top_best_model_path = os.path.join(args.output_dir, "best_model.pth")
+            # 复制最佳模型到顶层输出目录，并在文件名中保留F1分数和时间戳
+            top_best_model_path = os.path.join(args.output_dir, f"best_model_f1_{best_val_f1:.4f}_{timestamp}.pth")
             import shutil
             shutil.copy2(best_model_path, top_best_model_path)
+            # 同时创建一个固定名称的副本，方便预测脚本使用
+            standard_best_model_path = os.path.join(args.output_dir, "best_model.pth")
+            shutil.copy2(best_model_path, standard_best_model_path)
             
             if args.use_swanlab:
                 swanlab.log({"best_val_f1": best_val_f1})

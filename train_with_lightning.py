@@ -234,7 +234,7 @@ def main():
     # 检查点保存
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join(output_dir, 'checkpoints'),
-        filename='disprot-{epoch:02d}-{val_f1:.4f}',
+        filename='disprot-{epoch:02d}-f1_{val_f1:.4f}',
         monitor='val_f1',
         mode='max',
         save_top_k=3,
@@ -305,12 +305,20 @@ def main():
     # 复制最佳模型到outputs目录的顶层，以便于预测脚本使用
     best_model_path = checkpoint_callback.best_model_path
     best_model_filename = os.path.basename(best_model_path)
-    target_path = os.path.join(args.output_dir, "best_model.pth")
+    best_f1_score = checkpoint_callback.best_model_score.item()
+    
+    # 创建包含F1分数和时间戳的文件名
+    target_path = os.path.join(args.output_dir, f"best_model_f1_{best_f1_score:.4f}_{timestamp}.pth")
     
     # 复制最佳模型到顶层输出目录
     import shutil
     shutil.copy2(best_model_path, target_path)
     print(f"最佳模型已复制到: {target_path}")
+    
+    # 同时创建一个固定名称的副本，方便预测脚本使用
+    standard_path = os.path.join(args.output_dir, "best_model.pth")
+    shutil.copy2(best_model_path, standard_path)
+    print(f"标准命名最佳模型已复制到: {standard_path}")
     
     # 保存最佳模型到SwanLab（如果启用）
     if args.use_swanlab:
@@ -319,7 +327,7 @@ def main():
         # 记录最终结果
         swanlab.log({
             "best_model_filename": best_model_filename,
-            "best_val_f1": checkpoint_callback.best_model_score.item(),
+            "best_val_f1": best_f1_score,
             "total_epochs": trainer.current_epoch + 1,
             "run_timestamp": timestamp,
             "output_directory": output_dir

@@ -55,21 +55,45 @@ echo %INFO% 检查模型文件...
 :: 首先检查顶层 outputs 目录下的最佳模型
 set "MODEL_PATH=outputs\best_model.pth"
 if exist %MODEL_PATH% (
-    echo %INFO% 在顶层目录找到模型文件: %MODEL_PATH%
+    echo %INFO% 在顶层目录找到标准命名模型文件: %MODEL_PATH%
+    goto :found_model
+)
+
+:: 检查顶层目录中带有F1分数和时间戳的模型
+echo %INFO% 寻找带有F1分数的最佳模型...
+for /f %%F in ('dir /b outputs\best_model_f1_*.pth ^| sort /r') do (
+    set "MODEL_PATH=outputs\%%F"
+    echo %INFO% 找到模型文件: !MODEL_PATH!
     goto :found_model
 )
 
 :: 检查所有时间戳目录下的模型
 echo %INFO% 在时间戳子目录中搜索最佳模型...
 for /d %%D in (outputs\run_*) do (
+    :: 首先检查best_model_f1文件
+    for /f %%F in ('dir /b "%%D\best_model_f1_*.pth" 2^>nul ^| sort /r') do (
+        set "MODEL_PATH=%%D\%%F"
+        echo %INFO% 找到带F1分数的模型文件: !MODEL_PATH!
+        goto :found_model
+    )
+    
+    :: 然后检查标准命名的best_model.pth
     if exist "%%D\best_model.pth" (
         set "MODEL_PATH=%%D\best_model.pth"
         echo %INFO% 找到模型文件: !MODEL_PATH!
         goto :found_model
     )
     
+    :: 最后检查checkpoints目录
     if exist "%%D\checkpoints\*.pth" (
-        :: 找到第一个checkpoint文件
+        :: 找到checkpoint文件中F1分数最高的
+        for /f %%F in ('dir /b "%%D\checkpoints\*f1_*.pth" 2^>nul ^| sort /r') do (
+            set "MODEL_PATH=%%D\checkpoints\%%F"
+            echo %INFO% 找到checkpoint模型文件: !MODEL_PATH!
+            goto :found_model
+        )
+        
+        :: 如果没有找到带f1的文件，使用任意checkpoint文件
         for %%F in ("%%D\checkpoints\*.pth") do (
             set "MODEL_PATH=%%F"
             echo %INFO% 找到模型文件: !MODEL_PATH!
