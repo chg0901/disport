@@ -45,30 +45,67 @@ def preprocess_sequence(sequence):
     
     return seq_tensor.unsqueeze(0)  # 添加批维度
 
-def predict(model, sequence, device='cpu'):
+def predict(model, sequence, device='cpu', batch_size=5000):
     """
-    使用模型预测蛋白质序列的无序区域
+    使用模型预测蛋白质序列的无序区域，支持超长序列分批处理
     
     参数:
         model: 加载的模型
         sequence: 输入的蛋白质序列
         device: 计算设备
+        batch_size: 分批处理的最大长度
     
     返回:
         预测结果
     """
     model = model.to(device)
-    # 预处理序列
-    seq_tensor = preprocess_sequence(sequence).to(device)
     
-    # 预测
-    with torch.no_grad():
-        pred = model(seq_tensor)
+    # 设置最大位置编码长度，与模型中的设置保持一致
+    max_position_len = 49000  # 略小于模型中的50000，留出安全边界
     
-    # 获取每个位置的预测标签（0表示有序，1表示无序）
-    pred_labels = torch.argmax(pred, dim=-1).squeeze().cpu().numpy()
+    # 获取序列长度
+    seq_len = len(sequence)
     
-    return pred_labels
+    # 如果序列长度在允许范围内，直接处理
+    if seq_len <= max_position_len:
+        # 预处理序列
+        seq_tensor = preprocess_sequence(sequence).to(device)
+        
+        # 预测
+        with torch.no_grad():
+            pred = model(seq_tensor)
+        
+        # 获取每个位置的预测标签
+        pred_labels = torch.argmax(pred, dim=-1).squeeze().cpu().numpy()
+        
+        return pred_labels
+    else:
+        # 对于超长序列，分批处理
+        print(f"序列长度为 {seq_len}，超过位置编码最大长度 {max_position_len}，进行分批处理")
+        
+        # 使用较小的批大小，确保不会超过位置编码的限制
+        effective_batch_size = min(batch_size, max_position_len)
+        
+        # 分割成多个子序列处理
+        results = []
+        for i in range(0, seq_len, effective_batch_size):
+            end = min(i + effective_batch_size, seq_len)
+            sub_seq = sequence[i:end]
+            print(f"处理子序列片段: 位置 {i} 到 {end-1}，长度: {len(sub_seq)}")
+            
+            # 处理子序列
+            seq_tensor = preprocess_sequence(sub_seq).to(device)
+            
+            with torch.no_grad():
+                pred = model(seq_tensor)
+            
+            # 获取预测结果
+            pred_labels = torch.argmax(pred, dim=-1).squeeze().cpu().numpy()
+            results.append(pred_labels)
+        
+        # 合并所有子序列的预测结果
+        all_results = np.concatenate(results)
+        return all_results
 
 def visualize_prediction(sequence, prediction):
     """
@@ -80,12 +117,20 @@ def visualize_prediction(sequence, prediction):
     """
     # 打印序列
     print("序列:")
-    print(sequence)
+    if len(sequence) > 100:
+        print(sequence[:50] + "..." + sequence[-50:])
+        print(f"[总长度: {len(sequence)}]")
+    else:
+        print(sequence)
     
     # 打印结构预测（O表示有序，D表示无序）
     prediction_str = ''.join(['D' if p == 1 else 'O' for p in prediction])
     print("结构预测 (O=有序, D=无序):")
-    print(prediction_str)
+    if len(prediction_str) > 100:
+        print(prediction_str[:50] + "..." + prediction_str[-50:])
+        print(f"[总长度: {len(prediction_str)}]")
+    else:
+        print(prediction_str)
     
     # 打印统计信息
     disorder_ratio = np.mean(prediction)
@@ -118,6 +163,7 @@ if __name__ == "__main__":
     parser.add_argument('--sequence_file', help='包含蛋白质序列的文件路径')
     parser.add_argument('--output', help='输出文件路径')
     parser.add_argument('--device', default='cpu', choices=['cpu', 'cuda'], help='计算设备')
+    parser.add_argument('--batch_size', type=int, default=5000, help='分批处理的长度，适用于超长序列')
     
     args = parser.parse_args()
     
@@ -142,7 +188,7 @@ if __name__ == "__main__":
         parser.error("请提供蛋白质序列，使用--sequence或--sequence_file")
     
     # 进行预测
-    prediction = predict(model, sequence, device)
+    prediction = predict(model, sequence, device, args.batch_size)
     
     # 显示预测结果
     visualize_prediction(sequence, prediction)

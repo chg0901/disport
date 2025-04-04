@@ -174,8 +174,8 @@ class DisProtModel(nn.Module):
 
         # 输入映射层
         self.input_layer = nn.Linear(model_config.i_dim, self.d_model)
-        # 位置编码，支持长达20000的序列
-        self.position_embed = PositionalEncoding(self.d_model, max_len=20000)
+        # 位置编码，支持长达50000的序列
+        self.position_embed = PositionalEncoding(self.d_model, max_len=50000)
         # 输入归一化
         self.input_norm = nn.LayerNorm(self.d_model)
         # 输入Dropout

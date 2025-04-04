@@ -89,8 +89,12 @@ def predict_sequence(model, sequence, device='cpu', batch_size=1000):
     # 检查序列长度
     seq_len = len(sequence)
     
+    # 设置最大长度限制，与模型中的位置编码最大长度相匹配
+    # 如果序列超过这个长度，需要分批处理
+    max_position_len = 49000  # 略小于模型中的50000，留出安全边界
+    
     # 如果序列不是很长，直接预测
-    if seq_len <= batch_size:
+    if seq_len <= max_position_len:
         # 预处理序列
         seq_tensor = preprocess_sequence(sequence).to(device)
         
@@ -105,14 +109,17 @@ def predict_sequence(model, sequence, device='cpu', batch_size=1000):
         return ''.join([str(int(label)) for label in pred_labels])
     else:
         # 对于超长序列，分批处理
-        logger.info(f"序列长度为 {seq_len}，超过 {batch_size}，进行分批处理")
+        logger.info(f"序列长度为 {seq_len}，超过 {max_position_len}，进行分批处理")
+        
+        # 设置更小的批处理大小，确保不会超过位置编码的最大长度
+        effective_batch_size = min(batch_size, max_position_len)
         
         # 分割成多个子序列
         results = []
-        for i in range(0, seq_len, batch_size):
-            end = min(i + batch_size, seq_len)
+        for i in range(0, seq_len, effective_batch_size):
+            end = min(i + effective_batch_size, seq_len)
             sub_seq = sequence[i:end]
-            logger.info(f"处理子序列: 位置 {i} 到 {end-1}")
+            logger.info(f"处理子序列片段: 位置 {i} 到 {end-1}，长度: {len(sub_seq)}")
             
             seq_tensor = preprocess_sequence(sub_seq).to(device)
             
