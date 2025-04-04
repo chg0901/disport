@@ -20,7 +20,7 @@ train:
     dataloader:    # 数据加载器配置
         batch_size: 1     # 批大小
         shuffle: True     # 是否打乱数据
-        num_workers: 16   # 数据加载的并行线程数
+        num_workers: 14   # 数据加载的并行线程数， default is 16
         drop_last: True   # 是否丢弃最后不足一个批次的数据
     optimizer:     # 优化器配置
         lr: 2e-4           # 学习率
