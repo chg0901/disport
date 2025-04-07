@@ -11,6 +11,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 import swanlab
 from swanlab.integration.pytorch_lightning import SwanLabLogger
+# 导入我们新创建的SwanLab工具类
+from src.utils.swanlab_utils import safe_log, finish_experiment
 
 from tqdm import tqdm
 from omegaconf import OmegaConf
@@ -325,17 +327,18 @@ def main():
         # swanlab.save方法在0.5.4版本中不存在，因此我们不调用这个方法
         # swanlab.save(best_model_path)
         
-        # 记录最终结果
-        swanlab.log({
-            "best_model_filename": best_model_filename,
+        # 使用安全日志记录函数
+        metrics_to_log = {
             "best_val_f1": best_f1_score,
             "total_epochs": trainer.current_epoch + 1,
-            "run_timestamp": timestamp,
-            "output_directory": output_dir
-        })
+            "best_model_filename": best_model_filename,  # 会被过滤掉
+            "run_timestamp": timestamp,                  # 会被过滤掉
+            "output_directory": output_dir               # 会被过滤掉
+        }
+        safe_log(metrics_to_log, verbose=True)
 
         # 完成实验
-        swanlab.finish()
+        finish_experiment()
 
 
 if __name__ == '__main__':

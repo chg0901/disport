@@ -1,0 +1,27 @@
+# 总氨基酸类型数量（20种标准氨基酸+1种不确定类型'X'）
+residue_types:
+    21
+
+# 模型的相关配置
+model:
+    i_dim: 21      # 输入维度：氨基酸的one-hot编码维度
+    o_dim: 2       # 输出维度：二分类（有序/无序）
+    d_model: 64    # 模型隐藏层维度
+    n_head: 2      # Transformer的注意力头数量
+    n_layer: 2     # Transformer的层数
+
+# 数据相关配置
+data:
+    data_path: 'WSAA_data_public.pkl'  # 数据文件路径
+
+# 训练相关配置
+train:
+    epochs: 20     # 训练轮数
+    dataloader:    # 数据加载器配置
+        batch_size: 1     # 批大小
+        shuffle: True     # 是否打乱数据
+        num_workers: 14   # 数据加载的并行线程数， default is 16
+        drop_last: True   # 是否丢弃最后不足一个批次的数据
+    optimizer:     # 优化器配置
+        lr: 2e-4           # 学习率
+        weight_decay: 1e-4 # 权重衰减系数（L2正则化）

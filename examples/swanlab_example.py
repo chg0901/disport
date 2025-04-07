@@ -23,6 +23,8 @@ import torch.nn as nn
 import torch.optim as optim
 from baseline import DisProtModel, make_dataset
 from omegaconf import OmegaConf
+# 导入我们新创建的SwanLab工具类
+from src.utils.swanlab_utils import safe_log, finish_experiment
 
 # 加载配置
 config_path = os.path.join(project_root, 'config.yaml')
@@ -45,12 +47,14 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.CrossEntropyLoss()
 
 # 记录超参数和模型架构概要
-swanlab.log({
-    "model_type": 0,  # 将字符串类型改为数值类型
-    "optimizer": 0,   # 将字符串类型改为数值类型
+metrics_to_log = {
+    "model_type": 0,  # 数值类型
+    "optimizer": 0,   # 数值类型
     "learning_rate": 0.001,
     "batch_size": config.train.dataloader.batch_size,
-})
+    "model_name": "DisProtModel",  # 字符串类型，会被过滤掉
+}
+safe_log(metrics_to_log)
 
 # 模拟训练和评估过程
 for epoch in range(5):
@@ -62,12 +66,13 @@ for epoch in range(5):
     val_f1 = 0.7 + 0.05 * epoch + 0.01 * np.random.randn()
     
     # 记录指标到SwanLab
-    swanlab.log({
+    metrics_to_log = {
         "epoch": epoch,
         "train_loss": train_loss,
         "val_loss": val_loss,
         "val_f1": val_f1,
-    })
+    }
+    safe_log(metrics_to_log)
     
     print(f"Epoch {epoch}: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Val F1: {val_f1:.4f}")
 
@@ -78,7 +83,7 @@ torch.save(model.state_dict(), model_path)
 # swanlab.save(model_path)
 
 # 完成实验
-swanlab.finish()
+finish_experiment()
 
 print("SwanLab示例运行完成！请前往SwanLab查看训练可视化结果。") 
 

@@ -1,0 +1,46 @@
+# 无序蛋白质预测模型默认配置
+
+# 模型配置
+model:
+  d_model: 128         # 模型隐藏维度（较小，方便测试）
+  n_head: 4            # 注意力头数
+  n_layer: 2           # Transformer编码器层数（较少，方便测试）
+  i_dim: 21            # 输入维度（氨基酸编码）
+  o_dim: 2             # 输出维度（二分类：有序/无序）
+
+# 数据配置
+data:
+  data_path: "mock_data.pkl"   # 模拟数据集路径（相对于项目根目录）
+  max_seq_len: null            # 最大序列长度，null表示不限制
+  train_rate: 0.7              # 训练集比例（若数据集未预分割）
+  valid_rate: 0.2              # 验证集比例（若数据集未预分割）
+
+# 训练配置
+train:
+  epochs: 5            # 训练轮数（较少，方便测试）
+  save_interval: 1     # 保存模型的间隔（每多少个epoch保存一次）
+  eval_interval: 1     # 评估的间隔（每多少个epoch验证一次）
+  early_stopping: 3    # 早停轮数（较少，方便测试）
+  checkpoint_dir: "checkpoints"  # 检查点保存目录
+  use_gpu: true       # 是否使用GPU
+  gpu_ids: [0]        # 使用的GPU ID列表
+  seed: 42            # 随机种子
+  
+  # 数据加载器配置
+  dataloader:
+    batch_size: 4     # 批处理大小（较小，方便测试）
+    shuffle: true     # 是否打乱数据
+    num_workers: 0    # 数据加载的线程数（0表示在主进程中加载，方便调试）
+    drop_last: false  # 是否丢弃最后不完整的批次
+  
+  # 优化器配置
+  optimizer:
+    lr: 1.0e-3        # 学习率（较大，方便快速收敛）
+    weight_decay: 1.0e-4  # 权重衰减
+
+# SwanLab配置
+swanlab:
+  enabled: true                # 是否启用SwanLab
+  experiment_name: "disport_test"  # 实验名称
+  save_path: "swanlab_logs"    # SwanLab日志保存路径
+  monitoring_interval: 5       # 监控间隔(秒) 

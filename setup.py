@@ -16,6 +16,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/disprot-prediction",
     packages=find_packages(),
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -27,8 +28,8 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "disprot-train=baseline:main",
-            "disprot-predict=predict:main",
+            "disprot-train=scripts.train:main",
+            "disprot-predict=scripts.predict:main",
         ],
     },
 ) 

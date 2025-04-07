@@ -13,7 +13,9 @@ from omegaconf import OmegaConf
 from sklearn.metrics import f1_score
 from torch.utils.data import Dataset, DataLoader
 from torch.nn import TransformerEncoderLayer, TransformerEncoder
-import swanlab  # 导入SwanLab
+import swanlab
+# 导入我们新创建的SwanLab工具类
+from src.utils.swanlab_utils import safe_log, finish_experiment
 
 # 定义20种标准氨基酸的单字母缩写
 restypes = [
@@ -376,16 +378,18 @@ def main():
     
     # 训练结束，记录最终结果
     if args.use_swanlab:
-        swanlab.log({
+        # 使用安全日志记录函数
+        metrics_to_log = {
             "final_val_f1": val_f1,
             "best_val_f1": best_val_f1,
             "total_epochs": config.train.epochs,
-            "run_timestamp": timestamp,
-            "output_directory": output_dir
-        })
+            "run_timestamp": timestamp,             # 会被过滤掉
+            "output_directory": output_dir          # 会被过滤掉
+        }
+        safe_log(metrics_to_log, verbose=True)
         
         # 完成实验
-        swanlab.finish()
+        finish_experiment()
     
     print(f"训练完成！最佳F1分数: {best_val_f1}, 最佳模型已保存到: {best_model_path}")
     print(f"顶层最佳模型路径: {top_best_model_path}")
